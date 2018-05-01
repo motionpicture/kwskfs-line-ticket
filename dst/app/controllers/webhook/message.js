@@ -42,11 +42,11 @@ function pushHowToUse(userId) {
                             title: '何をしますか？',
                             text: '画面下部メニューから操作することもできます。',
                             actions: [
-                                {
-                                    type: 'message',
-                                    label: '座席予約メニューを見る',
-                                    text: '座席予約'
-                                },
+                                // {
+                                //     type: 'message',
+                                //     label: '座席予約メニューを見る',
+                                //     text: '座席予約'
+                                // },
                                 {
                                     type: 'message',
                                     label: '口座を確認する',
@@ -220,7 +220,11 @@ function selectWhomAskForMoney(user) {
             endpoint: process.env.API_ENDPOINT,
             auth: user.authClient
         });
-        const account = yield personService.findAccount({ personId: 'me' });
+        const accounts = yield personService.findAccounts({ personId: 'me' });
+        if (accounts.length === 0) {
+            throw new Error('口座未開設です。');
+        }
+        const account = accounts[0];
         const contact = yield personService.getContacts({ personId: 'me' });
         const token = yield user.signTransferMoneyInfo({
             userId: user.userId,
@@ -418,9 +422,13 @@ function findAccount(user) {
             endpoint: process.env.API_ENDPOINT,
             auth: user.authClient
         });
-        const account = yield personService.findAccount({ personId: 'me' });
-        debug('account:', account);
-        const text = util.format('口座ID: %s\n現在残高: %s\n引出可能残高: %s', account.id, parseInt(account.balance, 10).toLocaleString(), parseInt(account.safeBalance, 10).toLocaleString());
+        const accounts = yield personService.findAccounts({ personId: 'me' });
+        debug('accounts:', accounts);
+        if (accounts.length === 0) {
+            throw new Error('口座未開設です。');
+        }
+        const account = accounts[0];
+        const text = util.format('残高: %s\n引出可能残高: %s', account.balance.toLocaleString('ja'), account.availableBalance.toLocaleString('ja'));
         yield request.post({
             simple: false,
             url: 'https://api.line.me/v2/bot/message/push',
@@ -434,7 +442,7 @@ function findAccount(user) {
                         altText: '口座確認',
                         template: {
                             type: 'buttons',
-                            title: 'あなたのPecorino口座',
+                            title: `口座[${account.id}]`,
                             text: text,
                             actions: [
                                 {
@@ -467,8 +475,16 @@ function searchAccountTradeActions(user) {
             endpoint: process.env.API_ENDPOINT,
             auth: user.authClient
         });
-        const account = yield personService.findAccount({ personId: 'me' });
-        let transferActions = yield personService.searchAccountTradeActions({ personId: 'me' });
+        const accounts = yield personService.findAccounts({ personId: 'me' });
+        debug('accounts:', accounts);
+        if (accounts.length === 0) {
+            throw new Error('口座未開設です。');
+        }
+        const account = accounts[0];
+        let transferActions = yield personService.searchAccountMoneyTransferActions({
+            personId: 'me',
+            accountId: account.id
+        });
         // tslint:disable-next-line:no-magic-numbers
         transferActions = transferActions.reverse().slice(0, 10);
         if (transferActions.length === 0) {

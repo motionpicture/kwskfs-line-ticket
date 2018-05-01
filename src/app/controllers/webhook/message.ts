@@ -36,11 +36,11 @@ export async function pushHowToUse(userId: string) {
                         title: '何をしますか？',
                         text: '画面下部メニューから操作することもできます。',
                         actions: [
-                            {
-                                type: 'message',
-                                label: '座席予約メニューを見る',
-                                text: '座席予約'
-                            },
+                            // {
+                            //     type: 'message',
+                            //     label: '座席予約メニューを見る',
+                            //     text: '座席予約'
+                            // },
                             {
                                 type: 'message',
                                 label: '口座を確認する',
@@ -206,7 +206,11 @@ export async function selectWhomAskForMoney(user: User) {
         endpoint: <string>process.env.API_ENDPOINT,
         auth: user.authClient
     });
-    const account = await personService.findAccount({ personId: 'me' });
+    const accounts = await personService.findAccounts({ personId: 'me' });
+    if (accounts.length === 0) {
+        throw new Error('口座未開設です。');
+    }
+    const account = accounts[0];
     const contact = await personService.getContacts({ personId: 'me' });
 
     const token = await user.signTransferMoneyInfo({
@@ -408,14 +412,17 @@ export async function findAccount(user: User) {
         endpoint: <string>process.env.API_ENDPOINT,
         auth: user.authClient
     });
-    const account = await personService.findAccount({ personId: 'me' });
-    debug('account:', account);
+    const accounts = await personService.findAccounts({ personId: 'me' });
+    debug('accounts:', accounts);
+    if (accounts.length === 0) {
+        throw new Error('口座未開設です。');
+    }
+    const account = accounts[0];
 
     const text = util.format(
-        '口座ID: %s\n現在残高: %s\n引出可能残高: %s',
-        account.id,
-        parseInt(account.balance, 10).toLocaleString(),
-        parseInt(account.safeBalance, 10).toLocaleString()
+        '残高: %s\n引出可能残高: %s',
+        account.balance.toLocaleString('ja'),
+        account.availableBalance.toLocaleString('ja')
     );
 
     await request.post({
@@ -431,7 +438,7 @@ export async function findAccount(user: User) {
                     altText: '口座確認',
                     template: {
                         type: 'buttons',
-                        title: 'あなたのPecorino口座',
+                        title: `口座[${account.id}]`,
                         text: text,
                         actions: [
                             {
@@ -462,8 +469,16 @@ export async function searchAccountTradeActions(user: User) {
         endpoint: <string>process.env.API_ENDPOINT,
         auth: user.authClient
     });
-    const account = await personService.findAccount({ personId: 'me' });
-    let transferActions = await personService.searchAccountTradeActions({ personId: 'me' });
+    const accounts = await personService.findAccounts({ personId: 'me' });
+    debug('accounts:', accounts);
+    if (accounts.length === 0) {
+        throw new Error('口座未開設です。');
+    }
+    const account = accounts[0];
+    let transferActions = await personService.searchAccountMoneyTransferActions({
+        personId: 'me',
+        accountId: account.id
+    });
     // tslint:disable-next-line:no-magic-numbers
     transferActions = transferActions.reverse().slice(0, 10);
 
@@ -492,14 +507,14 @@ export async function searchAccountTradeActions(user: User) {
 
             return util.format(
                 '●%s %s %s %s %s[%s] -> %s[%s] @%s %s',
-                (a.fromLocation.id === account.id) ? '出' : '入',
+                ((<any>a.fromLocation).id === account.id) ? '出' : '入',
                 moment(a.endDate).format('YY.MM.DD HH:mm'),
                 actionName,
                 `${a.amount}円`,
                 a.fromLocation.name,
-                (a.fromLocation.id !== undefined) ? a.fromLocation.id : '',
+                ((<any>a.fromLocation).id !== undefined) ? (<any>a.fromLocation).id : '',
                 a.toLocation.name,
-                (a.toLocation.id !== undefined) ? a.toLocation.id : '',
+                ((<any>a.toLocation).id !== undefined) ? (<any>a.toLocation).id : '',
                 a.purpose.typeOf,
                 (a.object !== undefined) ? a.object.notes : ''
             );
