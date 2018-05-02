@@ -516,7 +516,7 @@ export async function searchAccountTradeActions(user: User) {
                 a.toLocation.name,
                 ((<any>a.toLocation).id !== undefined) ? (<any>a.toLocation).id : '',
                 a.purpose.typeOf,
-                (a.object !== undefined) ? a.object.notes : ''
+                (a.description !== undefined) ? a.description : ''
             );
         }
     ).join('\n');
