@@ -479,14 +479,15 @@ export async function searchAccountTradeActions(user: User) {
         personId: 'me',
         accountId: account.id
     });
-    // tslint:disable-next-line:no-magic-numbers
-    transferActions = transferActions.reverse().slice(0, 10);
 
     if (transferActions.length === 0) {
         await LINE.pushMessage(user.userId, 'まだ取引履歴はありません。');
 
         return;
     }
+
+    // tslint:disable-next-line:no-magic-numbers
+    transferActions = transferActions.slice(0, 10);
 
     const actionsStr = transferActions.map(
         (a) => {
@@ -506,7 +507,7 @@ export async function searchAccountTradeActions(user: User) {
             }
 
             return util.format(
-                '●%s %s %s %s %s[%s] -> %s[%s] @%s %s',
+                '●%s %s %s %s\n⇐ %s\n[%s]\n⇒ %s\n[%s]\n@%s',
                 ((<any>a.fromLocation).id === account.id) ? '出' : '入',
                 moment(a.endDate).format('YY.MM.DD HH:mm'),
                 actionName,
@@ -515,7 +516,6 @@ export async function searchAccountTradeActions(user: User) {
                 ((<any>a.fromLocation).id !== undefined) ? (<any>a.fromLocation).id : '',
                 a.toLocation.name,
                 ((<any>a.toLocation).id !== undefined) ? (<any>a.toLocation).id : '',
-                a.purpose.typeOf,
                 (a.description !== undefined) ? a.description : ''
             );
         }

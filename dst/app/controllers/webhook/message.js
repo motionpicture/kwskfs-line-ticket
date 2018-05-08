@@ -485,12 +485,12 @@ function searchAccountTradeActions(user) {
             personId: 'me',
             accountId: account.id
         });
-        // tslint:disable-next-line:no-magic-numbers
-        transferActions = transferActions.reverse().slice(0, 10);
         if (transferActions.length === 0) {
             yield LINE.pushMessage(user.userId, 'まだ取引履歴はありません。');
             return;
         }
+        // tslint:disable-next-line:no-magic-numbers
+        transferActions = transferActions.slice(0, 10);
         const actionsStr = transferActions.map((a) => {
             let actionName = '';
             switch (a.purpose.typeOf) {
@@ -505,7 +505,7 @@ function searchAccountTradeActions(user) {
                     break;
                 default:
             }
-            return util.format('●%s %s %s %s %s[%s] -> %s[%s] @%s %s', (a.fromLocation.id === account.id) ? '出' : '入', moment(a.endDate).format('YY.MM.DD HH:mm'), actionName, `${a.amount}円`, a.fromLocation.name, (a.fromLocation.id !== undefined) ? a.fromLocation.id : '', a.toLocation.name, (a.toLocation.id !== undefined) ? a.toLocation.id : '', a.purpose.typeOf, (a.description !== undefined) ? a.description : '');
+            return util.format('●%s %s %s %s\n⇐ %s\n[%s]\n⇒ %s\n[%s]\n@%s', (a.fromLocation.id === account.id) ? '出' : '入', moment(a.endDate).format('YY.MM.DD HH:mm'), actionName, `${a.amount}円`, a.fromLocation.name, (a.fromLocation.id !== undefined) ? a.fromLocation.id : '', a.toLocation.name, (a.toLocation.id !== undefined) ? a.toLocation.id : '', (a.description !== undefined) ? a.description : '');
         }).join('\n');
         yield LINE.pushMessage(user.userId, actionsStr);
     });
