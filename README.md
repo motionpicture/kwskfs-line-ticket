@@ -20,6 +20,7 @@
 | `NPM_TOKEN`                        | true     |                      | NPM auth token    |
 | `NODE_ENV`                         | true     |                      | environment name  |
 | `API_TOKEN_ISSUER`                 | true     |                      |                   |
+| `LINE_BOT_CHANNEL_ACCESS_TOKEN`    | true     |                      | LINEボットアクセストークン   |
 | `REDIS_HOST`                       | true     |                      |                   |
 | `REDIS_PORT`                       | true     |                      |                   |
 | `REDIS_KEY`                        | true     |                      |                   |

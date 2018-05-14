@@ -17,3 +17,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Fixed
 
 ### Security
+
+## v0.0.0 - 2018-05-14
+
+### Added
+
+- 口座照会を追加。
+- 口座取引履歴検索を追加。
