@@ -11,9 +11,9 @@
   "config": {},
   "dependencies": {
     "@motionpicture/express-middleware": "^0.1.0",
-    "@motionpicture/kwskfs-api-nodejs-client": "0.0.0-alpha.6",
-    "@motionpicture/kwskfs-domain": "0.0.0-alpha.22",
-    "@motionpicture/pecorino-api-nodejs-client": "0.0.0-alpha.2",
+    "@motionpicture/kwskfs-api-nodejs-client": "0.0.0-alpha.10",
+    "@motionpicture/kwskfs-domain": "0.0.0-alpha.38",
+    "@motionpicture/pecorino-api-nodejs-client": "0.0.0-alpha.11",
     "aws-sdk": "^2.230.1",
     "body-parser": "^1.18.2",
     "connect-redis": "^3.3.3",

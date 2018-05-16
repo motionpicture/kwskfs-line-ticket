@@ -1,10 +1,7 @@
 /**
  * LINE webhook messageコントローラー
- * @namespace app.controllers.webhook.message
  */
-
 import * as kwskfsapi from '@motionpicture/kwskfs-api-nodejs-client';
-import * as kwskfs from '@motionpicture/kwskfs-domain';
 import * as createDebug from 'debug';
 import * as moment from 'moment';
 import * as request from 'request-promise-native';
@@ -215,7 +212,7 @@ export async function selectWhomAskForMoney(user: User) {
 
     const token = await user.signTransferMoneyInfo({
         userId: user.userId,
-        accountId: account.id,
+        accountId: (<any>account).accountNumber,
         name: `${contact.familyName} ${contact.givenName}`
     });
     const friendMessage = `TransferMoneyToken.${token}`;
@@ -420,7 +417,8 @@ export async function findAccount(user: User) {
     const account = accounts[0];
 
     const text = util.format(
-        '残高: %s\n引出可能残高: %s',
+        '口座番号: %s\n残高: %s\n引出可能残高: %s',
+        (<any>account).accountNumber,
         account.balance.toLocaleString('ja'),
         account.availableBalance.toLocaleString('ja')
     );
@@ -438,7 +436,7 @@ export async function findAccount(user: User) {
                     altText: '口座確認',
                     template: {
                         type: 'buttons',
-                        title: `口座[${account.id}]`,
+                        title: '口座',
                         text: text,
                         actions: [
                             {
@@ -477,7 +475,7 @@ export async function searchAccountTradeActions(user: User) {
     const account = accounts[0];
     let transferActions = await personService.searchAccountMoneyTransferActions({
         personId: 'me',
-        accountId: account.id
+        accountId: (<any>account).accountNumber
     });
 
     if (transferActions.length === 0) {
@@ -508,14 +506,14 @@ export async function searchAccountTradeActions(user: User) {
 
             return util.format(
                 '●%s %s %s %s\n⇐ %s\n[%s]\n⇒ %s\n[%s]\n@%s',
-                ((<any>a.fromLocation).id === account.id) ? '出' : '入',
+                ((<any>a.fromLocation).accountNumber === (<any>account).accountNumber) ? '出' : '入',
                 moment(a.endDate).format('YY.MM.DD HH:mm'),
                 actionName,
                 `${a.amount}円`,
                 a.fromLocation.name,
-                ((<any>a.fromLocation).id !== undefined) ? (<any>a.fromLocation).id : '',
+                ((<any>a.fromLocation).accountNumber !== undefined) ? (<any>a.fromLocation).accountNumber : '',
                 a.toLocation.name,
-                ((<any>a.toLocation).id !== undefined) ? (<any>a.toLocation).id : '',
+                ((<any>a.toLocation).accountNumber !== undefined) ? (<any>a.toLocation).accountNumber : '',
                 (a.description !== undefined) ? a.description : ''
             );
         }
@@ -605,36 +603,6 @@ export async function askFromWhenAndToWhen(userId: string) {
             }
         }
     ).promise();
-}
-
-/**
- * 取引CSVダウンロードURIを発行する
- * @export
- * @function
- * @memberof app.controllers.webhook.message
- */
-export async function publishURI4transactionsCSV(userId: string, dateFrom: string, dateThrough: string) {
-    await LINE.pushMessage(userId, `${dateFrom} - ${dateThrough}の取引を検索しています...`);
-
-    const startFrom = moment(`${dateFrom}T00: 00: 00 + 09: 00`, 'YYYYMMDDThh:mm:ssZ');
-    const startThrough = moment(`${dateThrough}T00: 00: 00 + 09: 00`, 'YYYYMMDDThh:mm:ssZ').add(1, 'day');
-
-    const csv = await kwskfs.service.transaction.placeOrder.download(
-        {
-            startFrom: startFrom.toDate(),
-            startThrough: startThrough.toDate()
-        },
-        'csv'
-    )({ transaction: new kwskfs.repository.Transaction(kwskfs.mongoose.connection) });
-
-    await LINE.pushMessage(userId, 'csvを作成しています...');
-
-    const sasUrl = await kwskfs.service.util.uploadFile({
-        fileName: `kwskfs - line - ticket - transactions - ${moment().format('YYYYMMDDHHmmss')}.csv`,
-        text: csv
-    })();
-
-    await LINE.pushMessage(userId, `download -> ${sasUrl} `);
 }
 
 export async function logout(user: User) {

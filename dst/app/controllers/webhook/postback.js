@@ -1,8 +1,4 @@
 "use strict";
-/**
- * LINE webhook postbackコントローラー
- * @namespace app.controllers.webhook.postback
- */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -12,8 +8,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * LINE webhook postbackコントローラー
+ */
 const kwskfsapi = require("@motionpicture/kwskfs-api-nodejs-client");
-const kwskfs = require("@motionpicture/kwskfs-domain");
 const pecorinoapi = require("@motionpicture/pecorino-api-nodejs-client");
 const createDebug = require("debug");
 // import { google } from 'googleapis';
@@ -310,6 +308,9 @@ function confirmTransferMoney(user, token, price) {
             auth: oauth2client
         });
         const transaction = yield transferTransactionService4frontend.start({
+            agent: {
+                name: 'kwskfs-line-ticket'
+            },
             // tslint:disable-next-line:no-magic-numbers
             expires: moment().add(10, 'minutes').toDate(),
             recipient: {
@@ -318,9 +319,10 @@ function confirmTransferMoney(user, token, price) {
                 name: transferMoneyInfo.name,
                 url: ''
             },
-            price: price,
+            amount: price,
             notes: 'LINEチケットおこづかい',
-            toAccountId: transferMoneyInfo.accountId
+            fromAccountNumber: '',
+            toAccountNumber: transferMoneyInfo.accountId
         });
         debug('transaction started.', transaction.id);
         yield LINE.pushMessage(user.userId, '残高の確認がとれました。');
@@ -441,29 +443,3 @@ function depositFromCreditCard(user, amount, __) {
     });
 }
 exports.depositFromCreditCard = depositFromCreditCard;
-/**
- * 取引検索(csvダウンロード)
- * @export
- * @function
- * @memberof app.controllers.webhook.postback
- * @param {string} userId
- * @param {string} date YYYY-MM-DD形式
- */
-function searchTransactionsByDate(userId, date) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield LINE.pushMessage(userId, `${date}の取引を検索しています...`);
-        const startFrom = moment(`${date}T00:00:00+09:00`);
-        const startThrough = moment(`${date}T00:00:00+09:00`).add(1, 'day');
-        const csv = yield kwskfs.service.transaction.placeOrder.download({
-            startFrom: startFrom.toDate(),
-            startThrough: startThrough.toDate()
-        }, 'csv')({ transaction: new kwskfs.repository.Transaction(kwskfs.mongoose.connection) });
-        yield LINE.pushMessage(userId, 'csvを作成しています...');
-        const sasUrl = yield kwskfs.service.util.uploadFile({
-            fileName: `kwskfs-line-ticket-transactions-${moment().format('YYYYMMDDHHmmss')}.csv`,
-            text: csv
-        })();
-        yield LINE.pushMessage(userId, `download -> ${sasUrl} `);
-    });
-}
-exports.searchTransactionsByDate = searchTransactionsByDate;

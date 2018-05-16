@@ -1,8 +1,4 @@
 "use strict";
-/**
- * LINE webhook messageコントローラー
- * @namespace app.controllers.webhook.message
- */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -12,8 +8,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * LINE webhook messageコントローラー
+ */
 const kwskfsapi = require("@motionpicture/kwskfs-api-nodejs-client");
-const kwskfs = require("@motionpicture/kwskfs-domain");
 const createDebug = require("debug");
 const moment = require("moment");
 const request = require("request-promise-native");
@@ -228,7 +226,7 @@ function selectWhomAskForMoney(user) {
         const contact = yield personService.getContacts({ personId: 'me' });
         const token = yield user.signTransferMoneyInfo({
             userId: user.userId,
-            accountId: account.id,
+            accountId: account.accountNumber,
             name: `${contact.familyName} ${contact.givenName}`
         });
         const friendMessage = `TransferMoneyToken.${token}`;
@@ -428,7 +426,7 @@ function findAccount(user) {
             throw new Error('口座未開設です。');
         }
         const account = accounts[0];
-        const text = util.format('残高: %s\n引出可能残高: %s', account.balance.toLocaleString('ja'), account.availableBalance.toLocaleString('ja'));
+        const text = util.format('口座番号: %s\n残高: %s\n引出可能残高: %s', account.accountNumber, account.balance.toLocaleString('ja'), account.availableBalance.toLocaleString('ja'));
         yield request.post({
             simple: false,
             url: 'https://api.line.me/v2/bot/message/push',
@@ -442,7 +440,7 @@ function findAccount(user) {
                         altText: '口座確認',
                         template: {
                             type: 'buttons',
-                            title: `口座[${account.id}]`,
+                            title: '口座',
                             text: text,
                             actions: [
                                 {
@@ -483,7 +481,7 @@ function searchAccountTradeActions(user) {
         const account = accounts[0];
         let transferActions = yield personService.searchAccountMoneyTransferActions({
             personId: 'me',
-            accountId: account.id
+            accountId: account.accountNumber
         });
         if (transferActions.length === 0) {
             yield LINE.pushMessage(user.userId, 'まだ取引履歴はありません。');
@@ -505,7 +503,7 @@ function searchAccountTradeActions(user) {
                     break;
                 default:
             }
-            return util.format('●%s %s %s %s\n⇐ %s\n[%s]\n⇒ %s\n[%s]\n@%s', (a.fromLocation.id === account.id) ? '出' : '入', moment(a.endDate).format('YY.MM.DD HH:mm'), actionName, `${a.amount}円`, a.fromLocation.name, (a.fromLocation.id !== undefined) ? a.fromLocation.id : '', a.toLocation.name, (a.toLocation.id !== undefined) ? a.toLocation.id : '', (a.description !== undefined) ? a.description : '');
+            return util.format('●%s %s %s %s\n⇐ %s\n[%s]\n⇒ %s\n[%s]\n@%s', (a.fromLocation.accountNumber === account.accountNumber) ? '出' : '入', moment(a.endDate).format('YY.MM.DD HH:mm'), actionName, `${a.amount}円`, a.fromLocation.name, (a.fromLocation.accountNumber !== undefined) ? a.fromLocation.accountNumber : '', a.toLocation.name, (a.toLocation.accountNumber !== undefined) ? a.toLocation.accountNumber : '', (a.description !== undefined) ? a.description : '');
         }).join('\n');
         yield LINE.pushMessage(user.userId, actionsStr);
     });
@@ -589,30 +587,6 @@ function askFromWhenAndToWhen(userId) {
     });
 }
 exports.askFromWhenAndToWhen = askFromWhenAndToWhen;
-/**
- * 取引CSVダウンロードURIを発行する
- * @export
- * @function
- * @memberof app.controllers.webhook.message
- */
-function publishURI4transactionsCSV(userId, dateFrom, dateThrough) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield LINE.pushMessage(userId, `${dateFrom} - ${dateThrough}の取引を検索しています...`);
-        const startFrom = moment(`${dateFrom}T00: 00: 00 + 09: 00`, 'YYYYMMDDThh:mm:ssZ');
-        const startThrough = moment(`${dateThrough}T00: 00: 00 + 09: 00`, 'YYYYMMDDThh:mm:ssZ').add(1, 'day');
-        const csv = yield kwskfs.service.transaction.placeOrder.download({
-            startFrom: startFrom.toDate(),
-            startThrough: startThrough.toDate()
-        }, 'csv')({ transaction: new kwskfs.repository.Transaction(kwskfs.mongoose.connection) });
-        yield LINE.pushMessage(userId, 'csvを作成しています...');
-        const sasUrl = yield kwskfs.service.util.uploadFile({
-            fileName: `kwskfs - line - ticket - transactions - ${moment().format('YYYYMMDDHHmmss')}.csv`,
-            text: csv
-        })();
-        yield LINE.pushMessage(userId, `download -> ${sasUrl} `);
-    });
-}
-exports.publishURI4transactionsCSV = publishURI4transactionsCSV;
 function logout(user) {
     return __awaiter(this, void 0, void 0, function* () {
         yield request.post({

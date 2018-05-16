@@ -1,10 +1,7 @@
 /**
  * LINE webhook postbackコントローラー
- * @namespace app.controllers.webhook.postback
  */
-
 import * as kwskfsapi from '@motionpicture/kwskfs-api-nodejs-client';
-import * as kwskfs from '@motionpicture/kwskfs-domain';
 import * as pecorinoapi from '@motionpicture/pecorino-api-nodejs-client';
 import * as createDebug from 'debug';
 // import { google } from 'googleapis';
@@ -605,6 +602,9 @@ export async function confirmTransferMoney(user: User, token: string, price: num
     });
 
     const transaction = await transferTransactionService4frontend.start({
+        agent: {
+            name: 'kwskfs-line-ticket'
+        },
         // tslint:disable-next-line:no-magic-numbers
         expires: moment().add(10, 'minutes').toDate(),
         recipient: {
@@ -613,9 +613,10 @@ export async function confirmTransferMoney(user: User, token: string, price: num
             name: transferMoneyInfo.name,
             url: ''
         },
-        price: price,
+        amount: price,
         notes: 'LINEチケットおこづかい',
-        toAccountId: transferMoneyInfo.accountId
+        fromAccountNumber: '',
+        toAccountNumber: transferMoneyInfo.accountId
     });
     debug('transaction started.', transaction.id);
     await LINE.pushMessage(user.userId, '残高の確認がとれました。');
@@ -739,36 +740,4 @@ export async function depositFromCreditCard(user: User, amount: number, __: stri
     // });
     // debug('transaction confirmed.');
     await LINE.pushMessage(user.userId, '入金処理が完了しました。');
-}
-
-/**
- * 取引検索(csvダウンロード)
- * @export
- * @function
- * @memberof app.controllers.webhook.postback
- * @param {string} userId
- * @param {string} date YYYY-MM-DD形式
- */
-export async function searchTransactionsByDate(userId: string, date: string) {
-    await LINE.pushMessage(userId, `${date}の取引を検索しています...`);
-
-    const startFrom = moment(`${date}T00:00:00+09:00`);
-    const startThrough = moment(`${date}T00:00:00+09:00`).add(1, 'day');
-
-    const csv = await kwskfs.service.transaction.placeOrder.download(
-        {
-            startFrom: startFrom.toDate(),
-            startThrough: startThrough.toDate()
-        },
-        'csv'
-    )({ transaction: new kwskfs.repository.Transaction(kwskfs.mongoose.connection) });
-
-    await LINE.pushMessage(userId, 'csvを作成しています...');
-
-    const sasUrl = await kwskfs.service.util.uploadFile({
-        fileName: `kwskfs-line-ticket-transactions-${moment().format('YYYYMMDDHHmmss')}.csv`,
-        text: csv
-    })();
-
-    await LINE.pushMessage(userId, `download -> ${sasUrl} `);
 }
